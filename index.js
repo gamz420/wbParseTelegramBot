@@ -1,9 +1,10 @@
 import TelegramBot from "node-telegram-bot-api";
-import env from "dotenv"; // подключили NPM dotenv
+import env from "dotenv";
 env.config();
 
 import { getRandomProduct } from "./utils/getRandomProduct.js";
 import { EMAIL_REGEXP } from "./constants.js";
+import { savingPayment } from "./db/savingPayment.js";
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, {
   polling: true,
@@ -17,9 +18,9 @@ const options = {
   }),
 };
 
-bot.on("callback_query", (msg) => {
+bot.on("callback_query", async (msg) => {
   if (msg.data === "/pay") {
-    console.log("Тут будет логика оформления оплаты");
+    await savingPayment(msg);
   }
 });
 
@@ -60,7 +61,7 @@ bot.on("message", async (msg) => {
       } else {
         bot.sendMessage(chatId, description);
       }
-    }, 60000);
+    }, 3600000);
   }
 });
 
