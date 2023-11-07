@@ -1,6 +1,6 @@
 import { connectToCluster } from "./connectToCluster.js";
 
-export const savingPayment = async (msg) => {
+export const savingPayment = async (msg, mail) => {
   try {
     const mongoClient = await connectToCluster(process.env.DB_URI);
     const db = mongoClient.db("wb_parse");
@@ -15,6 +15,7 @@ export const savingPayment = async (msg) => {
       username: msg.from.username,
       paid: true,
       end_of_subscription: endOfSubscriptionDate,
+      mail,
     };
 
     const res = await col.insertOne(client);
