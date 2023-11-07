@@ -5,12 +5,15 @@ env.config();
 import { getRandomProduct } from "./utils/getRandomProduct.js";
 import { EMAIL_REGEXP } from "./constants.js";
 import { savingPayment } from "./db/savingPayment.js";
+import { sendEmail } from "./utils/sendEmail.js";
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, {
   polling: true,
 });
 
 const idsUsed = [];
+let mail = "";
+let chatId = 0;
 
 const options = {
   reply_markup: JSON.stringify({
@@ -18,14 +21,52 @@ const options = {
   }),
 };
 
+const mainGetProductFunction = () => {
+  setInterval(async () => {
+    let product = {};
+    while (true) {
+      const result = await getRandomProduct();
+
+      if (result && !idsUsed.includes(result.id)) {
+        product = result;
+        break;
+      }
+    }
+
+    const description = `https://www.wildberries.ru/catalog/${product.id}/detail.aspx\n - ${product.name}\n - Бренд: ${product.brand}\n - Скидка: ${product.sale}%\n - Рейтинг: ${product.reviewRating}\n - Стоимость: ${product.salePriceU} руб.`;
+
+    idsUsed.push(product.id);
+
+    if (!!chatId) {
+      if (product.imageLink) {
+        bot.sendPhoto(chatId, product.imageLink, {
+          caption: description,
+        });
+      } else {
+        bot.sendMessage(chatId, description);
+      }
+    }
+  }, 3600000); // 1 hour
+  // }, 120000); // 2 min
+};
+
 bot.on("callback_query", async (msg) => {
   if (msg.data === "/pay") {
-    await savingPayment(msg);
+    const resSave = await savingPayment(msg, mail);
+
+    if (resSave) {
+      await sendEmail("jeydey@mail.ru");
+      bot.sendMessage(
+        chatId,
+        "Оплата успешна прошла!\n\nПроверьте почту, если не найдете письмо, ищите его в спаме.\n\nБот активирован, ожидайте, как он подберет товар он сразу же пришлёт его вам."
+      );
+      mainGetProductFunction();
+    }
   }
 });
 
 bot.on("message", async (msg) => {
-  const chatId = msg.chat.id;
+  chatId = msg.chat.id;
 
   if (msg.text === "/start") {
     bot.sendMessage(
@@ -35,33 +76,8 @@ bot.on("message", async (msg) => {
   }
 
   if (EMAIL_REGEXP.test(msg.text)) {
+    mail = msg.text;
     bot.sendMessage(chatId, "Переходи по ссылке для оплаты", options);
-  }
-
-  if (msg.text === "/get") {
-    setInterval(async () => {
-      let product = {};
-      while (true) {
-        const result = await getRandomProduct();
-
-        if (result && !idsUsed.includes(result.id)) {
-          product = result;
-          break;
-        }
-      }
-
-      const description = `https://www.wildberries.ru/catalog/${product.id}/detail.aspx\n - ${product.name}\n - Бренд: ${product.brand}\n - Скидка: ${product.sale}%\n - Рейтинг: ${product.reviewRating}\n - Стоимость: ${product.salePriceU} руб.`;
-
-      idsUsed.push(product.id);
-
-      if (product.imageLink) {
-        bot.sendPhoto(chatId, product.imageLink, {
-          caption: description,
-        });
-      } else {
-        bot.sendMessage(chatId, description);
-      }
-    }, 3600000);
   }
 });
 
