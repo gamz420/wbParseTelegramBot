@@ -13,6 +13,7 @@ export const savingPayment = async (msg, mail) => {
       id: msg.from.id,
       first_name: msg.from.first_name,
       username: msg.from.username,
+      chat_id: msg.message.chat.id,
       paid: true,
       end_of_subscription: endOfSubscriptionDate,
       mail,

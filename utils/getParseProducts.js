@@ -9,11 +9,11 @@ const brandsIdForUrl = getUrlsArr();
 export const getParseProducts = async (url, maxPrice, nameTypeProduct) => {
   const products = [];
 
-  const requestPromises = brandsIdForUrl.map(async (brandId) => {
+  for (let brandId of brandsIdForUrl) {
     let page = 1;
 
-    while (true) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+    while (true && page <= 30) {
+      await new Promise((resolve) => setTimeout(resolve, 4000));
 
       try {
         const urlUpdate = getUpdateUrl(url, brandId, page);
@@ -28,7 +28,7 @@ export const getParseProducts = async (url, maxPrice, nameTypeProduct) => {
 
         responseData.data.products.forEach(
           ({ id, name, salePriceU, brand, sale, volume, reviewRating }) => {
-            if (volume === 1 && salePriceU / 100 <= maxPrice) {
+            if (salePriceU / 100 <= maxPrice) {
               products.push({
                 id,
                 name,
@@ -49,11 +49,7 @@ export const getParseProducts = async (url, maxPrice, nameTypeProduct) => {
         break;
       }
     }
-  });
-
-  await Promise.all(requestPromises);
-
-  console.log(products, nameTypeProduct);
+  }
 
   return products;
 };
